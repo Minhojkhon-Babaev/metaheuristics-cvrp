@@ -2,7 +2,7 @@
 
 Соседства ограничены K ближайшими клиентами, обход управляется очередью
 «грязных» вершин с don't-look bits. Набор операторов: relocate, swap,
-2-opt, Or-opt (сегменты длины 2 и 3) и межмаршрутный 2-opt*.
+2-opt и Or-opt (сегменты длины 2 и 3).
 """
 
 from __future__ import annotations
@@ -124,7 +124,7 @@ class LocalSearch:
         return self._export()
 
     def _improve_node(self, u: int) -> list[int] | None:
-        for move in (self._relocate, self._swap, self._two_opt, self._or_opt, self._two_opt_star):
+        for move in (self._relocate, self._swap, self._two_opt, self._or_opt):
             touched = move(u)
             if touched:
                 return touched
@@ -289,37 +289,3 @@ class LocalSearch:
         self._refresh(dst)
         if src != dst:
             self._refresh(src)
-
-    def _two_opt_star(self, u: int) -> list[int] | None:
-        """Межмаршрутный 2-opt*: обмен хвостами двух маршрутов."""
-        dist = self.dist
-        ru = self.route_of[u]
-        route_u = self.routes[ru]
-        i = self.pos_of[u]
-        su = self._succ(u)
-        tail_u_load = self.loads[ru] - self.pref[ru][i + 1]
-
-        for v in self.neighbors[u]:
-            rv = self.route_of[v]
-            if rv < 0 or rv == ru:
-                continue
-            route_v = self.routes[rv]
-            j = self.pos_of[v]
-            sv = self._succ(v)
-            tail_v_load = self.loads[rv] - self.pref[rv][j + 1]
-
-            if self.pref[ru][i + 1] + tail_v_load > self.capacity:
-                continue
-            if self.pref[rv][j + 1] + tail_u_load > self.capacity:
-                continue
-
-            delta = dist[u][sv] + dist[v][su] - dist[u][su] - dist[v][sv]
-            if delta < -EPS:
-                new_u = route_u[: i + 1] + route_v[j + 1 :]
-                new_v = route_v[: j + 1] + route_u[i + 1 :]
-                self.routes[ru] = new_u
-                self.routes[rv] = new_v
-                self._refresh(ru)
-                self._refresh(rv)
-                return [u, v, su, sv]
-        return None

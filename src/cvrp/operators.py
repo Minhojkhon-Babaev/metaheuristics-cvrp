@@ -61,62 +61,10 @@ def shaw_removal(inst: Instance, sol: Solution, q: int, rng: random.Random, p: f
     return removed
 
 
-def string_removal(inst: Instance, sol: Solution, q: int, rng: random.Random, max_string: int = 10) -> list[int]:
-    """SISR-подобное удаление строк подряд идущих клиентов из соседних маршрутов.
-
-    Вокруг случайного опорного клиента выбираются маршруты, и из каждого
-    вырезается непрерывный кусок — это разрушает целые «куски» географии,
-    а не отдельные точки.
-    """
-    pool = sol.visited()
-    if not pool:
-        return []
-
-    dist = inst.dist
-    seed = rng.choice(pool)
-    order = sorted(pool, key=lambda c: dist[seed][c])
-
-    removed: list[int] = []
-    touched_routes: set[int] = set()
-    route_of = {c: ri for ri, route in enumerate(sol.routes) for c in route}
-
-    for c in order:
-        if len(removed) >= q:
-            break
-        ri = route_of[c]
-        if ri in touched_routes:
-            continue
-        touched_routes.add(ri)
-        route = sol.routes[ri]
-        length = min(len(route), rng.randint(1, max_string), q - len(removed))
-        if length <= 0:
-            continue
-        start = max(0, min(route.index(c) - rng.randint(0, length - 1), len(route) - length))
-        removed.extend(route[start : start + length])
-    return removed
-
-
-def route_removal(inst: Instance, sol: Solution, q: int, rng: random.Random) -> list[int]:
-    """Полностью расформировывает маршруты, отдавая предпочтение слабо загруженным.
-
-    Это единственный оператор, способный сократить число машин: на инстансах
-    с плотной упаковкой (наборы M и P) оптимум достигается ровно на
-    нижней границе bin packing, и «лишний» маршрут иначе не растворяется.
-    """
-    order = sorted(range(len(sol.routes)), key=lambda ri: sol.loads[ri])
-    removed: list[int] = []
-    while order and len(removed) < q:
-        pick = int(len(order) * (rng.random() ** 2))
-        removed.extend(sol.routes[order.pop(pick)])
-    return removed
-
-
 DESTROY_OPERATORS = {
     "random": random_removal,
     "worst": worst_removal,
     "shaw": shaw_removal,
-    "string": string_removal,
-    "route": route_removal,
 }
 
 
